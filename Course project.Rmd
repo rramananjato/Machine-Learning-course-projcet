@@ -1,0 +1,59 @@
+---
+title: "Course project"
+author: "Ranto Ramananjato"
+date: "2/9/2021"
+output: html_document
+---
+
+## Loading packages and data
+This section is about loading requested packages and data.
+
+```{r charging, echo = FALSE}
+library(caret)
+library(ggplot2)
+library(plyr)
+data <- read.csv("C:/Users/rramananjato/OneDrive - UNICEF/DCO/UNICEF/MCO/general/Formation/Data Science specialisation/8- Practical Machine Learning/course project/pml-training.csv")
+test <- read.csv("C:/Users/rramananjato/OneDrive - UNICEF/DCO/UNICEF/MCO/general/Formation/Data Science specialisation/8- Practical Machine Learning/course project/pml-testing.csv")
+
+```
+
+## Exploratory data analysis
+Once we have data and packages, we carry out some exploratory data analysis to find out which variables we are considering as predictors. Then, we selected 52 numeric and non NA variables to use for modelling. Next steps consists on split the data into training and test set. We keep 70% for training set.
+
+```{r exploratory, echo = TRUE}
+str(data)
+summary(data)
+data  <-  subset(data, select = c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z", "accel_belt_x",  "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z", "roll_arm", "pitch_arm", "yaw_arm",  "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z", "accel_arm_x", "accel_arm_y", "accel_arm_z",  "magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "total_accel_dumbbell", "gyros_dumbbell_x", "gyros_dumbbell_y", "gyros_dumbbell_z",  "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z", "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "roll_forearm", "pitch_forearm", "yaw_forearm", "total_accel_forearm",  "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z", "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z", "classe"))
+set.seed(123)
+inTrain <- createDataPartition(y=data$classe, p=0.7, list=FALSE)
+train <- data[inTrain,]
+test <- data[-inTrain,]
+```
+
+## Modelling
+We chose a combined model for modelling. At the first stage, we fit a CART model for better performance in non linear setting and interpretability. At second stage, we fit a Linear Discriminant Analysis for time saving. Lastly, we use Generalized Additive Model to combine the first two models. Accuracy is about 0.5 for the first model, 0.7 for the second and 0.7 for the final one.
+
+```{r modelling, echo=TRUE}
+mod1 <- train(classe~., data=train, method = "rpart", na.action=na.omit)
+pred1 <- predict(mod1, test)
+confusionMatrix(pred1, test$classe)
+mod2 <- train(classe~., data=train, method = "lda", na.action=na.omit)
+pred2 <- predict(mod2, test)
+confusionMatrix(pred2, test$classe)
+predDF <- data.frame(pred1, pred2, classe = test$classe)
+combmod <- train(classe~., method = "gam", data=predDF)
+combpred <- predict(combmod, predDF)
+confusionMatrix(pred2, test$classe)
+```
+
+## Prediction
+Once the model is finalized, we can predict for the test set. 
+
+```{r prediction, echo = TRUE}
+test2  <-  subset(test, select = c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z", "accel_belt_x",  "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z", "roll_arm", "pitch_arm", "yaw_arm",  "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z", "accel_arm_x", "accel_arm_y", "accel_arm_z",  "magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "total_accel_dumbbell", "gyros_dumbbell_x", "gyros_dumbbell_y", "gyros_dumbbell_z",  "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z", "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "roll_forearm", "pitch_forearm", "yaw_forearm", "total_accel_forearm",  "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z", "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z"))
+pred1 <- predict(mod1, test2)
+pred2 <- predict(mod2, test2)
+predDF <- data.frame(pred1, pred2)
+combpred <- predict(combmod, predDF)
+
+```
